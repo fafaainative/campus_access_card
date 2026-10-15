@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 🎓 Campus Access Card Request Manager
 
 A simple Python-based command-line application for managing campus access-card requests. The system helps campus staff register requests for visitor, student, and staff access cards, approve requests, issue cards, and record returned cards.
@@ -341,3 +342,7 @@ Engineer B: Okonkwo Ifunanaya
 ✅ Final Note
 
 Campus Access Card Request Manager is a practical project for learning how to build reliable Python applications through implementation, testing, collaboration, and review. The goal is not just to make the program run, but to understand the
+=======
+# campus_access_card
+A campus Access Card is a CLI applicqation that issues visitor, student and staff access cards to create a request that will be approved with an authorized staff identifier. 
+>>>>>>> origin/feat/1-request-workflow
