@@ -1,6 +1,4 @@
 
-"""Tests for campus access-card workflow rules."""
-
 import copy
 import unittest
 
@@ -13,7 +11,7 @@ from campus_access.workflow import (
 
 class TestAccessCardWorkflow(unittest.TestCase):
     def setUp(self):
-        """Create isolated test requests for each test."""
+        """Create fresh test data before each test."""
         self.request = {
             "id": "A001",
             "fellow_id": "F001",
@@ -21,67 +19,89 @@ class TestAccessCardWorkflow(unittest.TestCase):
             "status": "requested",
             "approved_by": None,
         }
+
+        # Test fixture only; this is not a production request store.
         self.requests = [self.request]
 
-    def test_new_request_starts_requested(self):
+    def test_new_request_starts_as_requested(self):
         self.assertEqual(self.request["status"], "requested")
         self.assertIsNone(self.request["approved_by"])
 
     def test_valid_approver_can_approve(self):
-        approve_request(self.requests, "A001", "M01")
+        success, message = approve_request(
+            self.requests, "A001", "M01"
+        )
 
+        self.assertTrue(success, message)
         self.assertEqual(self.request["status"], "approved")
         self.assertEqual(self.request["approved_by"], "M01")
 
-    def test_empty_approver_is_rejected(self):
-        for approver in ("", "   "):
-            with self.subTest(approver=repr(approver)):
-                before = copy.deepcopy(self.request)
-
-                with self.assertRaises(ValueError):
-                    approve_request(self.requests, "A001", approver)
-
-                self.assertEqual(self.request, before)
-
-    def test_issuing_before_approval_is_rejected(self):
+    def test_empty_approver_is_rejected_without_changes(self):
         before = copy.deepcopy(self.request)
 
-        with self.assertRaises(ValueError):
-            issue_card(self.requests, "A001")
+        success, message = approve_request(
+            self.requests, "A001", ""
+        )
 
+        self.assertFalse(success)
+        self.assertIn("Approver", message)
+        self.assertEqual(self.request, before)
+
+    def test_whitespace_approver_is_rejected(self):
+        before = copy.deepcopy(self.request)
+
+        success, message = approve_request(
+            self.requests, "A001", "   "
+        )
+
+        self.assertFalse(success)
+        self.assertEqual(self.request, before)
+
+    def test_issue_before_approval_is_rejected(self):
+        before = copy.deepcopy(self.request)
+
+        success, message = issue_card(self.requests, "A001")
+
+        self.assertFalse(success)
         self.assertEqual(self.request, before)
 
     def test_approved_request_can_be_issued(self):
         approve_request(self.requests, "A001", "M01")
-        issue_card(self.requests, "A001")
 
+        success, message = issue_card(self.requests, "A001")
+
+        self.assertTrue(success, message)
         self.assertEqual(self.request["status"], "issued")
-        self.assertEqual(self.request["approved_by"], "M01")
 
-    def test_issued_request_can_be_returned(self):
+    def test_issued_card_can_be_returned(self):
         approve_request(self.requests, "A001", "M01")
         issue_card(self.requests, "A001")
-        return_card(self.requests, "A001")
 
+        success, message = return_card(self.requests, "A001")
+
+        self.assertTrue(success, message)
         self.assertEqual(self.request["status"], "returned")
 
-    def test_returning_twice_is_rejected(self):
+    def test_card_cannot_be_returned_twice(self):
         approve_request(self.requests, "A001", "M01")
         issue_card(self.requests, "A001")
         return_card(self.requests, "A001")
         before = copy.deepcopy(self.request)
 
-        with self.assertRaises(ValueError):
-            return_card(self.requests, "A001")
+        success, message = return_card(self.requests, "A001")
 
+        self.assertFalse(success)
         self.assertEqual(self.request, before)
 
     def test_unknown_request_id_is_rejected(self):
         before = copy.deepcopy(self.request)
 
-        with self.assertRaises(KeyError):
-            approve_request(self.requests, "A999", "M01")
+        success, message = approve_request(
+            self.requests, "A999", "M01"
+        )
 
+        self.assertFalse(success)
+        self.assertIn("not found", message.lower())
         self.assertEqual(self.request, before)
 
     def test_returned_card_cannot_be_issued_again(self):
@@ -90,18 +110,20 @@ class TestAccessCardWorkflow(unittest.TestCase):
         return_card(self.requests, "A001")
         before = copy.deepcopy(self.request)
 
-        with self.assertRaises(ValueError):
-            issue_card(self.requests, "A001")
+        success, message = issue_card(self.requests, "A001")
 
+        self.assertFalse(success)
         self.assertEqual(self.request, before)
 
-    def test_approving_twice_is_rejected_without_changes(self):
+    def test_request_cannot_be_approved_twice(self):
         approve_request(self.requests, "A001", "M01")
         before = copy.deepcopy(self.request)
 
-        with self.assertRaises(ValueError):
-            approve_request(self.requests, "A001", "M02")
+        success, message = approve_request(
+            self.requests, "A001", "M02"
+        )
 
+        self.assertFalse(success)
         self.assertEqual(self.request, before)
 
     def test_issued_card_cannot_be_issued_twice(self):
@@ -109,17 +131,9 @@ class TestAccessCardWorkflow(unittest.TestCase):
         issue_card(self.requests, "A001")
         before = copy.deepcopy(self.request)
 
-        with self.assertRaises(ValueError):
-            issue_card(self.requests, "A001")
+        success, message = issue_card(self.requests, "A001")
 
-        self.assertEqual(self.request, before)
-
-    def test_return_before_issuing_is_rejected(self):
-        before = copy.deepcopy(self.request)
-
-        with self.assertRaises(ValueError):
-            return_card(self.requests, "A001")
-
+        self.assertFalse(success)
         self.assertEqual(self.request, before)
 
 
