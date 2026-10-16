@@ -31,6 +31,19 @@ def validate_request_id(request_id):
     return request_id
 
 
+def validate_fellow_id(fellow_id):
+    """Validate Fellow IDs in the format F001, F002, and so on."""
+    if not isinstance(fellow_id, str):
+        raise ValueError("Fellow ID must be a string.")
+
+    if re.fullmatch(r"F[0-9]{3}", fellow_id) is None:
+        raise ValueError(
+            "Invalid Fellow ID. Use the format F001, F002, and so on."
+        )
+
+    return fellow_id
+
+
 def validate_request_record(record):
     """Validate one complete request dictionary."""
     if not isinstance(record, dict):
@@ -43,10 +56,7 @@ def validate_request_record(record):
         )
 
     validate_request_id(record["id"])
-
-    fellow_id = record["fellow_id"]
-    if not isinstance(fellow_id, str) or not fellow_id.strip():
-        raise ValueError("Fellow ID must be a non-empty string.")
+    validate_fellow_id(record["fellow_id"])
 
     card_type = record["card_type"]
     if not isinstance(card_type, str) or card_type not in CARD_TYPES:
@@ -101,8 +111,7 @@ def reset_requests(records=None):
 
 def create_request(fellow_id, card_type):
     """Validate input, generate a unique ID, and create a request."""
-    if not isinstance(fellow_id, str) or not fellow_id.strip():
-        raise ValueError("Fellow ID must be a non-empty string.")
+    validate_fellow_id(fellow_id)
 
     if not isinstance(card_type, str):
         raise ValueError("Card type must be a string.")
@@ -129,7 +138,7 @@ def create_request(fellow_id, card_type):
 
     new_request = {
         "id": request_id,
-        "fellow_id": fellow_id.strip(),
+        "fellow_id": fellow_id,
         "card_type": normalized_card_type,
         "status": "requested",
         "approved_by": None,
